@@ -1,4 +1,6 @@
 /// select2 plugin
+// compatiable handsontable 2.7.0 and select2 4.0.1
+
 (function (Handsontable) {
     "use strict";
 
@@ -16,56 +18,43 @@
     };
 
     Select2Editor.prototype.createElements = function () {
-        this.$body = $(document.body);
+        Handsontable.editors.TextEditor.prototype.createElements.apply(this, arguments);
 
-        this.TEXTAREA = document.createElement('input');
-        this.TEXTAREA.setAttribute('type', 'text');
-        this.$textarea = $(this.TEXTAREA);
+        var SLT = document.createElement('select');
+        SLT.className = 'select2Editor';
+        SLT.style = "width: 300px";
+        Handsontable.Dom.empty(this.TEXTAREA_PARENT);
+        this.TEXTAREA_PARENT.appendChild(SLT);
+        this.textarea = SLT;
 
-        Handsontable.Dom.addClass(this.TEXTAREA, 'handsontableInput');
-
-        this.textareaStyle = this.TEXTAREA.style;
-        this.textareaStyle.width = 0;
-        this.textareaStyle.height = 0;
-
-        this.TEXTAREA_PARENT = document.createElement('DIV');
-        Handsontable.Dom.addClass(this.TEXTAREA_PARENT, 'handsontableInputHolder');
-
-        this.textareaParentStyle = this.TEXTAREA_PARENT.style;
-        this.textareaParentStyle.top = 0;
-        this.textareaParentStyle.left = 0;
-        this.textareaParentStyle.display = 'none';
-
-        this.TEXTAREA_PARENT.appendChild(this.TEXTAREA);
-
-        this.instance.rootElement.appendChild(this.TEXTAREA_PARENT);
-
-        var that = this;
-        this.instance._registerTimeout(setTimeout(function () {
-            that.refreshDimensions();
-        }, 0));
+        this.assignHooks();
     };
 
-    var onSelect2Changed = function () {
-        this.close();
-        this.finishEditing();
-    };
     var onSelect2Closed = function () {
-        this.close();
+        console.info('select close');
+        this.setValue('test');
         this.finishEditing();
+
+                $(this.textarea).select2('close');
+                this.instance.destroyEditor();
+this.instance.listen();
+        this.close();
     };
+
     var onBeforeKeyDown = function (event) {
         var instance = this;
         var that = instance.getActiveEditor();
 
-        var keyCodes = Handsontable.helper.keyCode;
+        var keyCodes = Handsontable.helper.KEY_CODES;
+
+        //console.info('before key down', keyCodes.ENTER, event.keyCode, event.target);
         var ctrlDown = (event.ctrlKey || event.metaKey) && !event.altKey; //catch CTRL but not right ALT (which in some systems triggers ALT+CTRL)
 
-
         //Process only events that have been fired in the editor
-        if (!$(event.target).hasClass('select2-input') || event.isImmediatePropagationStopped()) {
+        if (!$(event.target).hasClass('select2-search__field') || event.isImmediatePropagationStopped) {
             return;
         }
+
         if (event.keyCode === 17 || event.keyCode === 224 || event.keyCode === 91 || event.keyCode === 93) {
             //when CTRL or its equivalent is pressed and cell is edited, don't prepare selectable text in textarea
             event.stopImmediatePropagation();
@@ -76,22 +65,34 @@
 
         switch (event.keyCode) {
             case keyCodes.ARROW_RIGHT:
-                if (Handsontable.Dom.getCaretPosition(target) !== target.value.length) {
+                if (Handsontable.Dom.getCaretPosition(target) !== target.value.length || target.value.length > 0) {
                     event.stopImmediatePropagation();
                 } else {
-                    that.$textarea.select2('close');
+                    $(that.textarea).select2('close');
                 }
                 break;
 
             case keyCodes.ARROW_LEFT:
-                if (Handsontable.Dom.getCaretPosition(target) !== 0) {
+                if (Handsontable.Dom.getCaretPosition(target) !== 0 || target.value.length > 0) {
                     event.stopImmediatePropagation();
                 } else {
-                    that.$textarea.select2('close');
+                    $(that.textarea).select2('close');
                 }
                 break;
 
+            case keyCodes.ARROW_UP:
+                  event.stopImmediatePropagation(); // prevent EditorManager from processing this event
+                  event.preventDefault(); // prevent browser from scrolling the page up
+                  break;
+
+            case keyCodes.ARROW_DOWN:
+              event.stopImmediatePropagation();
+              event.preventDefault();
+              break;
+
             case keyCodes.ENTER:
+            event.stopImmediatePropagation();
+                //console.info('enter');   //TODO
                 var selected = that.instance.getSelected();
                 var isMultipleSelection = !(selected[0] === selected[2] && selected[1] === selected[3]);
                 if ((ctrlDown && !isMultipleSelection) || event.altKey) { //if ctrl+enter or alt+enter, add new line
@@ -121,37 +122,21 @@
             case keyCodes.END:
                 event.stopImmediatePropagation(); //backspace, delete, home, end should only work locally when cell is edited (not in table context)
                 break;
+            default:
+                //console.info(event.keyCode);
         }
 
     };
 
     Select2Editor.prototype.open = function (keyboardEvent) {
-		this.refreshDimensions();
+        this.refreshDimensions();
         this.textareaParentStyle.display = 'block';
-        this.textareaParentStyle.zIndex = 20000;
         this.instance.addHook('beforeKeyDown', onBeforeKeyDown);
+        $(this.textarea).select2(this.options);
+            //.on('select2:close', onSelect2Closed.bind(this));
 
-        this.$textarea.css({
-            height: $(this.TD).height() + 4,
-            'min-width': $(this.TD).outerWidth() - 4
-        });
+        $(this.textarea).select2('open');
 
-        //display the list
-        this.$textarea.show();
-
-        var self = this;
-        this.$textarea.select2(this.options)
-            .on('change', onSelect2Changed.bind(this))
-            .on('select2-close', onSelect2Closed.bind(this));
-
-        self.$textarea.select2('open');
-        
-        // Pushes initial character entered into the search field, if available
-        if (keyboardEvent && keyboardEvent.keyCode) {
-            var key = keyboardEvent.keyCode;
-            var keyText = (String.fromCharCode((96 <= key && key <= 105) ? key-48 : key)).toLowerCase();
-            self.$textarea.select2('search', keyText);
-        }
     };
 
     Select2Editor.prototype.init = function () {
@@ -159,42 +144,24 @@
     };
 
     Select2Editor.prototype.close = function () {
-        this.instance.listen();
         this.instance.removeHook('beforeKeyDown', onBeforeKeyDown);
-        this.$textarea.off();
-        this.$textarea.hide();
+        this.instance.listen();
         Handsontable.editors.TextEditor.prototype.close.apply(this, arguments);
     };
 
-    Select2Editor.prototype.val = function (value) {
-        if (typeof value == 'undefined') {
-            return this.$textarea.val();
-        } else {
-            this.$textarea.val(value);
+    Select2Editor.prototype.finishEditing = function(restoreOriginalValue) {
+      this.setValue($(this.textarea).val());   // .val() or .text()
+
+      Handsontable.editors.TextEditor.prototype.finishEditing.apply(this, arguments);
+    };
+
+    Select2Editor.prototype.assignHooks = function() {
+      var _this = this;
+      this.instance.addHook('afterDestroy', function() {
+        if (_this.textarea) {
+          $(_this.textarea).select2('destroy');
         }
-    };
-
-    Select2Editor.prototype.focus = function () {
-
-        this.instance.listen();
-
-        // DO NOT CALL THE BASE TEXTEDITOR FOCUS METHOD HERE, IT CAN MAKE THIS EDITOR BEHAVE POORLY AND HAS NO PURPOSE WITHIN THE CONTEXT OF THIS EDITOR
-        //Handsontable.editors.TextEditor.prototype.focus.apply(this, arguments);
-    };
-
-    Select2Editor.prototype.beginEditing = function (initialValue) {
-        var onBeginEditing = this.instance.getSettings().onBeginEditing;
-        if (onBeginEditing && onBeginEditing() === false) {
-            return;
-        }
-
-        Handsontable.editors.TextEditor.prototype.beginEditing.apply(this, arguments);
-
-    };
-
-    Select2Editor.prototype.finishEditing = function (isCancelled, ctrlDown) {
-        this.instance.listen();
-        return Handsontable.editors.TextEditor.prototype.finishEditing.apply(this, arguments);
+      });
     };
 
     Handsontable.editors.Select2Editor = Select2Editor;
