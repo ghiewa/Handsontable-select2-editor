@@ -1,5 +1,5 @@
 /// select2 plugin
-// compatiable handsontable 2.7.0 and select2 4.0.1
+// compatiable handsontable 0.27.0 and select2 4.0.1
 
 (function (Handsontable) {
     "use strict";
@@ -28,17 +28,6 @@
         this.textarea = SLT;
 
         this.assignHooks();
-    };
-
-    var onSelect2Closed = function () {
-        console.info('select close');
-        this.setValue('test');
-        this.finishEditing();
-
-                $(this.textarea).select2('close');
-                this.instance.destroyEditor();
-this.instance.listen();
-        this.close();
     };
 
     var onBeforeKeyDown = function (event) {
@@ -133,7 +122,6 @@ this.instance.listen();
         this.textareaParentStyle.display = 'block';
         this.instance.addHook('beforeKeyDown', onBeforeKeyDown);
         $(this.textarea).select2(this.options);
-            //.on('select2:close', onSelect2Closed.bind(this));
 
         $(this.textarea).select2('open');
 
