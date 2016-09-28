@@ -10,15 +10,43 @@ Using this custom editor
 ```JAVASCRIPT
 var optionsList = [{id: 1, text: 'jsmith'}, {id: 2, text: 'wjones'}, ...];
 var columnsList = [{
-                    data: "UserName", // from datasource
+                    data: 0,
                     editor: 'select2',
-                    select2Options: { // these options are the select2 initialization options 
-                        data: optionsList,
-                        dropdownAutoWidth: true,
-                        allowClear: true,
-                        width: 'resolve'
+                    renderer: customDropdownRenderer,
+                    width: '200px',
+                    select2Options: {
+                        ajax: {
+                            url: "http://127.0.0.1:8181/api/items",
+                            dataType: 'json',
+                            delay: 250,
+                            data: function (params) {
+                              return {
+                                _filters: '{"Glid":' + '"' + params.term + '"}', // search term
+                                _page: params.page,
+                                _perPage: 30
+                              };
+                            },
+
+                            processResults: function (data, params) {
+                              params.page = params.page || 1;
+
+                              return {
+                                results: $.map(data, function(obj) {
+                                    return { id: obj.Glid, text: obj.CustomerRef };
+                                })
+                              };
+                            },
+                            cache: true
+                        },
+                        //data: optionsList,
+
+                        //dropdownAutoWidth: true,
+                        width: 'resolve',
+                        escapeMarkup: function (markup) { return markup; },
+						            templateResult: formatRepo,
+                        templateSelection: formatRepoSelection
                     }
-                },
+                  },
                 ...
                 ];
 
