@@ -1,11 +1,9 @@
 Handsontable-select2-editor
 ===========================
 
-Handsontable Select2 Editor
+Handsontable Select2 Editor. Forked from https://github.com/trebuchetty/Handsontable-select2-editor
 
-Here is a jsfiddle of this editor working with Select2 3.5.2 and Handsontable 0.16.0
-http://jsfiddle.net/trebuchetty/tLp0dnga/ (hat-tip to @abugroup for helping to put this together)
-
+Here is a jsfiddle of this editor working with Select2 4.0.1 and Handsontable 0.27.0
 
 Using this custom editor
 
@@ -31,9 +29,6 @@ this.$container.handsontable({
     columns: columnsList
     });
 ```
-
-I've left out a lot here for brevity, so let me know if any clarification is required.
-
 
 
 License
